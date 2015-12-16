@@ -10,7 +10,16 @@ wtex = None
 def load_texturepacks():
     tpaths = [line.rstrip('\n') for line in open('texture_packs.txt')]
     for p in tpaths:
-        tex_packs.append(omg.WAD(p))
+    	try:
+        	tex_packs.append(omg.WAD(p))
+    	except:
+    		pass
+
+def tile_image(img_from,img_to,offset=None):
+	#tiles img_from onto img_to with optional offset
+	if offset is None: offset = (0,0)
+	
+	for i in range()
 
 # def texture_to_image(
 
