@@ -10,16 +10,22 @@ wtex = None
 def load_texturepacks():
     tpaths = [line.rstrip('\n') for line in open('texture_packs.txt')]
     for p in tpaths:
-    	try:
-        	tex_packs.append(omg.WAD(p))
-    	except:
-    		pass
+        try:
+            tex_packs.append(omg.WAD(p))
+        except:
+            pass
 
 def tile_image(img_from,img_to,offset=None):
-	#tiles img_from onto img_to with optional offset
-	if offset is None: offset = (0,0)
-	
-	for i in range()
+    # tiles img_from onto img_to with optional offset
+    if offset is None: 
+        offset = (0,0)
+    
+    for i in range(img_to.size[0]):
+        for j in range(img_to.size[1]):
+            px = img_from.getpixel(( (i + offset[0]) % img_from.size[0], (j + offset[1]) % img_from.size[1] ))
+            img_to.putpixel((i,j),px)
+            
+    return img_to
 
 # def texture_to_image(
 
@@ -77,38 +83,77 @@ def build_line(line):
         if bsec.z_ceil < z1: z2 = bsec.z_ceil
         if bsec.z_floor > z4: z3 = bsec.z_floor
     
-    print "zs {} {} {} {}".format(z1,z2,z3,z4)
-    print "length {}".format(length)
-    print "f_height {}".format(f_height)
-    print "b_height {}".format(b_height)
-    print sidedef.tx_up
-    print sidedef.tx_mid
-    print sidedef.tx_low
+    # print "zs {} {} {} {}".format(z1,z2,z3,z4)
+    # print "length {}".format(length)
+    # print "f_height {}".format(f_height)
+    # print "b_height {}".format(b_height)
+    # print sidedef.tx_up
+    # print sidedef.tx_mid
+    # print sidedef.tx_low
     
     tx_u = None
     tx_m = None
     tx_d = None
     
-    if sidedef.tx_up != "-": tx_u = make_texture(sidedef.tx_up)
-    if sidedef.tx_mid != "-": tx_m = make_texture(sidedef.tx_mid)
-    if sidedef.tx_low != "-": tx_d = make_texture(sidedef.tx_low)
-    
-    sec_mid = Image.new("RGB",(length,z3-z2),"black")
-    for i in range(0,int(length/tx_m.size[0])):
-        for j in range(0,int((z3-z2)/tx_m.size[0])):
-            sec_mid.paste(tx_m,(i*tx_m.size[0],j*tx_m.size[1]))
-            
-    sec_mid.show()
-    
     line_img = Image.new("RGB",(length,f_height),"black")
-    draw = ImageDraw.Draw(line_img)
-    draw.rectangle((0,z1-z1,length,z1-z2),fill="#ff0000")
-    draw.rectangle((0,z1-z2,length,z1-z3),fill="#ffff00")
-    draw.rectangle((0,z1-z3,length,z1-z4),fill="#00ffff")
     
+    offs = (sidedef.off_x,sidedef.off_y)
     
-    #line_img.show()
+    if sidedef.tx_up != "-" and z1 != z2: 
+        tx_u = make_texture(sidedef.tx_up)
+        if linedef.upper_unpeg:
+            uoffs = (offs[0],offs[1])
+        else:
+            uoffs = (offs[0],offs[1]-(z1-z2))
+        sec_up = Image.new("RGB",(length,z1-z2),"black")
+        sec_up = tile_image(tx_u,sec_up,uoffs)
+        line_img.paste(sec_up,(0,z1-z1))
+    if sidedef.tx_mid != "-": 
+        if linedef.lower_unpeg:
+            moffs = (offs[0],offs[1]-(z2-z3))
+        else:
+            moffs = (offs[0],offs[1])
+        tx_m = make_texture(sidedef.tx_mid)
+        sec_mid = Image.new("RGB",(length,z2-z3),"black")
+        sec_mid = tile_image(tx_m,sec_mid,moffs)
+        line_img.paste(sec_mid,(0,z1-z2))
+    if sidedef.tx_low != "-" and z3 != z4: 
+        if linedef.lower_unpeg:
+            loffs = (offs[0],offs[1]-(z3-z4))
+        else:
+            loffs = (offs[0],offs[1])
+        tx_d = make_texture(sidedef.tx_low)
+        sec_low = Image.new("RGB",(length,z3-z4),"black")
+        sec_low = tile_image(tx_d,sec_low,loffs)
+        line_img.paste(sec_low,(0,z1-z3))
+    
+    return (line_img,z1,z4)
 
+def build_all(lines):
+    built_lines = []
+    for l in lines:
+        built_lines.append(build_line(l))
+        
+    length = 0
+    top = -32767
+    bottom = 32767
+    for l in built_lines:
+        length += l[0].size[0]
+        # print l[1]
+        if l[1] > top: top = l[1]
+        if l[2] < bottom: bottom = l[2]
+        
+    # print top 
+    # print bottom
+        
+    output = Image.new("RGB",(length,top - bottom),"black")
+    
+    o = 0
+    for l in built_lines:
+        output.paste(l[0],(o,top-l[1]))
+        o += l[0].size[0]
+    
+    output.show()
 
     
 if __name__=="__main__":
@@ -125,5 +170,5 @@ if __name__=="__main__":
         load_texturepacks()
         wad = omg.WAD(wad_path)
         wmap = omg.mapedit.MapEditor(wad.maps[map_id])
-        for l in lines:
-            build_line(l)
+        #build_line(lines[0])[0].show()
+        build_all(lines)
