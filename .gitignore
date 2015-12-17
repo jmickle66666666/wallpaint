@@ -44,3 +44,7 @@ Temporary Items
 
 *.backup*
 *.dbs
+
+output.wad
+texture_packs.txt
+walldat.json
