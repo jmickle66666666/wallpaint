@@ -213,6 +213,8 @@ def rebuild():
     wad.txdefs = txd.to_lumps()
     wad.maps[str(map_id)] = wmap.to_lumps()
     wad.to_file('output.wad')
+    os.remove('walldat.json')
+    os.remove('output.png')
 
 
 
