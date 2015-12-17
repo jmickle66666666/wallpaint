@@ -48,3 +48,6 @@ Temporary Items
 output.wad
 texture_packs.txt
 walldat.json
+
+build/*
+*.spec
