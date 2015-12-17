@@ -1,8 +1,10 @@
-import omg, sys, math, omg.txdef
+import omg, sys, math, omg.txdef, json, os.path, random
 from PIL import Image, ImageDraw
 
 cache = {}
 tex_packs = []
+wad_path = None
+map_id = None
 wad = None
 wmap = None
 wtex = None
@@ -99,7 +101,10 @@ def build_line(line):
     
     offs = (sidedef.off_x,sidedef.off_y)
     
+    secs = [0,0,0]
+
     if sidedef.tx_up != "-" and z1 != z2: 
+        secs[0] = 1
         tx_u = make_texture(sidedef.tx_up)
         if linedef.upper_unpeg:
             uoffs = (offs[0],offs[1])
@@ -109,6 +114,7 @@ def build_line(line):
         sec_up = tile_image(tx_u,sec_up,uoffs)
         line_img.paste(sec_up,(0,z1-z1))
     if sidedef.tx_mid != "-": 
+        secs[1] = 1
         if linedef.lower_unpeg:
             moffs = (offs[0],offs[1]-(z2-z3))
         else:
@@ -118,6 +124,7 @@ def build_line(line):
         sec_mid = tile_image(tx_m,sec_mid,moffs)
         line_img.paste(sec_mid,(0,z1-z2))
     if sidedef.tx_low != "-" and z3 != z4: 
+        secs[2] = 1
         if linedef.lower_unpeg:
             loffs = (offs[0],offs[1]-(z3-z4))
         else:
@@ -127,7 +134,7 @@ def build_line(line):
         sec_low = tile_image(tx_d,sec_low,loffs)
         line_img.paste(sec_low,(0,z1-z3))
     
-    return (line_img,z1,z4)
+    return (line_img,z1,z4,line,secs)
 
 def build_all(lines):
     built_lines = []
@@ -148,18 +155,95 @@ def build_all(lines):
         
     output = Image.new("RGB",(length,top - bottom),"black")
     
+    ldat = []
+
     o = 0
     for l in built_lines:
+        dline = {}
+        dline['id'] = l[3]
+        dline['offsetx'] = o
+        dline['offsety'] = top-l[1]
+        dline['length'] = l[0].size[0]
+        dline['height'] = l[1] - l[2]
+        dline['secs'] = l[4]
         output.paste(l[0],(o,top-l[1]))
         o += l[0].size[0]
-    
-    output.show()
+        ldat.append(dline)
 
+    wdat = {}
+    wdat['linedata'] = ldat
+    wdat['wad_path'] = wad_path
+    wdat['map_id'] = map_id
+    
+    with open('walldat.json', 'w') as outfile:
+        json.dump(wdat, outfile)
+
+    output.save('output.png')
+
+def rebuild():
+    if os.path.exists('walldat.json') != True:
+        print "no data found: walldat.json"
+        return
+
+    with open('walldat.json') as openfile:
+        wjson = json.load(openfile)
+    wad_path = wjson['wad_path']
+    map_id = wjson['map_id']
+    line_data = wjson['linedata']
+    tex_img = Image.open('output.png','r')
+    # tex_img.show()
+    print wad_path
+    print map_id
+    print line_data
+    wwad = omg.WAD(str(wad_path))
+    wmap = omg.MapEditor(wwad.maps[str(map_id)])
+    txd = omg.txdef.Textures()
+    for l in line_data:
+        limg = tex_img.crop((l['offsetx'],l['offsety'],l['offsetx']+l['length'],l['offsety']+l['height'])).copy()
+        limg = limg.convert('RGB')
+        # add image to textures
+        tname = getname()
+        patch = omg.Graphic()
+        patch.from_Image(limg)
+        wwad.patches[tname] = patch
+        txd[tname] = omg.txdef.TextureDef()
+        txd[tname].name = tname
+        txd[tname].patches.append(omg.txdef.PatchDef())
+        txd[tname].patches[0].name = tname
+        txd[tname].width, txd[tname].height = patch.dimensions
+
+        # set line's sidedef textures to this
+        linedef = wmap.linedefs[l['id']]
+        sidedef = wmap.sidedefs[linedef.front]
+        sidedef.off_x = 0
+        sidedef.off_y = 0
+        linedef.upper_unpeg = True
+        linedef.lower_unpeg = False
+        if l['secs'][0] == 1: sidedef.tx_up = tname
+        if l['secs'][1] == 1: sidedef.tx_mid = tname
+        if l['secs'][2] == 1: 
+            sidedef.tx_low = tname
+            linedef.lower_unpeg = True
+
+    wwad.txdefs = txd.to_lumps()
+    wwad.maps[str(map_id)] = wmap.to_lumps()
+    wwad.to_file('newad.wad')
+
+
+
+def getname():
+    output = "WPT"
+    for i in range(5):
+        output += str(random.randint(0,9))
+    return output
     
 if __name__=="__main__":
     if len(sys.argv) < 3:
-        print "usage:"
-        print "    wallpaint.py wad map [line numbers]"
+        if "rebuild" in sys.argv:
+            rebuild()
+        else:
+            print "usage:"
+            print "    wallpaint.py wad map [line numbers]"
     else :
         wad_path = sys.argv[1]
         map_id = sys.argv[2].upper()
