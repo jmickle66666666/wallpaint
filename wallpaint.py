@@ -1,4 +1,4 @@
-import omg, sys, math, omg.txdef, json, os.path, random
+import omg, sys, math, omg.txdef, json, os.path, random, string
 from PIL import Image, ImageDraw
 
 cache = {}
@@ -85,14 +85,6 @@ def build_line(line):
         if bsec.z_ceil < z1: z2 = bsec.z_ceil
         if bsec.z_floor > z4: z3 = bsec.z_floor
     
-    # print "zs {} {} {} {}".format(z1,z2,z3,z4)
-    # print "length {}".format(length)
-    # print "f_height {}".format(f_height)
-    # print "b_height {}".format(b_height)
-    # print sidedef.tx_up
-    # print sidedef.tx_mid
-    # print sidedef.tx_low
-    
     tx_u = None
     tx_m = None
     tx_d = None
@@ -146,12 +138,8 @@ def build_all(lines):
     bottom = 32767
     for l in built_lines:
         length += l[0].size[0]
-        # print l[1]
         if l[1] > top: top = l[1]
         if l[2] < bottom: bottom = l[2]
-        
-    # print top 
-    # print bottom
         
     output = Image.new("RGB",(length,top - bottom),"black")
     
@@ -191,12 +179,9 @@ def rebuild():
     map_id = wjson['map_id']
     line_data = wjson['linedata']
     tex_img = Image.open('output.png','r')
-    # tex_img.show()
-    print wad_path
-    print map_id
-    print line_data
-    wwad = omg.WAD(str(wad_path))
-    wmap = omg.MapEditor(wwad.maps[str(map_id)])
+    global wad
+    wad = omg.WAD(str(wad_path))
+    wmap = omg.MapEditor(wad.maps[str(map_id)])
     txd = omg.txdef.Textures()
     for l in line_data:
         limg = tex_img.crop((l['offsetx'],l['offsety'],l['offsetx']+l['length'],l['offsety']+l['height'])).copy()
@@ -205,7 +190,7 @@ def rebuild():
         tname = getname()
         patch = omg.Graphic()
         patch.from_Image(limg)
-        wwad.patches[tname] = patch
+        wad.patches[tname] = patch
         txd[tname] = omg.txdef.TextureDef()
         txd[tname].name = tname
         txd[tname].patches.append(omg.txdef.PatchDef())
@@ -225,17 +210,27 @@ def rebuild():
             sidedef.tx_low = tname
             linedef.lower_unpeg = True
 
-    wwad.txdefs = txd.to_lumps()
-    wwad.maps[str(map_id)] = wmap.to_lumps()
-    wwad.to_file('newad.wad')
+    wad.txdefs = txd.to_lumps()
+    wad.maps[str(map_id)] = wmap.to_lumps()
+    wad.to_file('output.wad')
 
 
 
 def getname():
-    output = "WPT"
-    for i in range(5):
-        output += str(random.randint(0,9))
-    return output
+    ltrs = string.digits + string.uppercase
+    def n_2_l(n):
+        sid = ""
+        while n > len(ltrs):
+            sid += ltrs[n % len(ltrs)]
+            n = int(n/len(ltrs))
+        sid += ltrs[n]
+        return sid[::-1]
+
+    n = 0
+    while "WPT"+n_2_l(n) in wad.patches:
+        n+=1
+
+    return "WPT"+n_2_l(n)
     
 if __name__=="__main__":
     if len(sys.argv) < 3:
