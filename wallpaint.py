@@ -9,6 +9,7 @@ wad = None
 wmap = None
 wtex = None
 
+
 def load_texturepacks():
     tpaths = [line.rstrip('\n') for line in open('texture_packs.txt')]
     for p in tpaths:
@@ -17,6 +18,7 @@ def load_texturepacks():
         except:
             pass
 
+
 def tile_image(img_from,img_to,offset=None):
     # tiles img_from onto img_to with optional offset
     if offset is None: 
@@ -24,12 +26,11 @@ def tile_image(img_from,img_to,offset=None):
     
     for i in range(img_to.size[0]):
         for j in range(img_to.size[1]):
-            px = img_from.getpixel(( (i + offset[0]) % img_from.size[0], (j + offset[1]) % img_from.size[1] ))
-            img_to.putpixel((i,j),px)
+            px = img_from.getpixel(((i + offset[0]) % img_from.size[0], (j + offset[1]) % img_from.size[1]))
+            img_to.putpixel((i, j), px)
             
     return img_to
 
-# def texture_to_image(
 
 def make_texture(t):
     # return an Image of a texture (build from patches)
@@ -40,19 +41,19 @@ def make_texture(t):
     for tx_ch in tex_packs:
         txd = omg.txdef.Textures(tx_ch.txdefs)
         txw = tx_ch
-        if t in txd: break
+        if t in txd:
+            break
         
     if t not in txd: 
-        print ("!!CANNOT FIND {} IN TEXTURE PACKS!!".format(t))
-        print ("")
-        print ("try editing texture_packs.txt and adding your texture wad path to it")
+        print("!!CANNOT FIND {} IN TEXTURE PACKS!!".format(t))
+        print("")
+        print("try editing texture_packs.txt and adding your texture wad path to it")
         return
-    
-    
-    output = Image.new("RGB",(txd[t].width,txd[t].height))
+
+    output = Image.new("RGB", (txd[t].width, txd[t].height))
     for p in txd[t].patches:
         pimg = txw.patches[p.name.upper()].to_Image()
-        output.paste(pimg,(p.x,p.y))
+        output.paste(pimg, (p.x, p.y))
         
     cache[t] = output
         
@@ -63,6 +64,7 @@ def line_length(line):
     i = wmap.vertexes[line.vx_a]
     j = wmap.vertexes[line.vx_b]
     return int(math.sqrt((i.x - j.x)**2 + (i.y - j.y)**2))
+
 
 def build_line(line):
     linedef = wmap.linedefs[line]
@@ -89,9 +91,9 @@ def build_line(line):
     tx_m = None
     tx_d = None
     
-    line_img = Image.new("RGB",(length,f_height),"black")
+    line_img = Image.new("RGB", (length, f_height), "black")
     
-    offs = (sidedef.off_x,sidedef.off_y)
+    offs = (sidedef.off_x, sidedef.off_y)
     
     secs = [0,0,0]
 
@@ -99,12 +101,12 @@ def build_line(line):
         secs[0] = 1
         tx_u = make_texture(sidedef.tx_up)
         if linedef.upper_unpeg:
-            uoffs = (offs[0],offs[1])
+            uoffs = (offs[0], offs[1])
         else:
-            uoffs = (offs[0],offs[1]-(z1-z2))
-        sec_up = Image.new("RGB",(length,z1-z2),"black")
-        sec_up = tile_image(tx_u,sec_up,uoffs)
-        line_img.paste(sec_up,(0,z1-z1))
+            uoffs = (offs[0], offs[1]-(z1-z2))
+        sec_up = Image.new("RGB", (length,z1-z2), "black")
+        sec_up = tile_image(tx_u, sec_up, uoffs)
+        line_img.paste(sec_up, (0, z1-z1))
     if sidedef.tx_mid != "-": 
         secs[1] = 1
         if linedef.lower_unpeg:
@@ -112,9 +114,9 @@ def build_line(line):
         else:
             moffs = (offs[0],offs[1])
         tx_m = make_texture(sidedef.tx_mid)
-        sec_mid = Image.new("RGB",(length,z2-z3),"black")
-        sec_mid = tile_image(tx_m,sec_mid,moffs)
-        line_img.paste(sec_mid,(0,z1-z2))
+        sec_mid = Image.new("RGB", (length, z2-z3), "black")
+        sec_mid = tile_image(tx_m, sec_mid, moffs)
+        line_img.paste(sec_mid, (0, z1-z2))
     if sidedef.tx_low != "-" and z3 != z4: 
         secs[2] = 1
         if linedef.lower_unpeg:
@@ -122,11 +124,12 @@ def build_line(line):
         else:
             loffs = (offs[0],offs[1])
         tx_d = make_texture(sidedef.tx_low)
-        sec_low = Image.new("RGB",(length,z3-z4),"black")
-        sec_low = tile_image(tx_d,sec_low,loffs)
-        line_img.paste(sec_low,(0,z1-z3))
+        sec_low = Image.new("RGB", (length, z3-z4), "black")
+        sec_low = tile_image(tx_d, sec_low, loffs)
+        line_img.paste(sec_low, (0, z1-z3))
     
-    return (line_img,z1,z4,line,secs)
+    return line_img,z1,z4,line,secs
+
 
 def build_all(lines):
     built_lines = []
@@ -170,7 +173,7 @@ def build_all(lines):
 
 def rebuild():
     if os.path.exists('walldat.json') != True:
-        print "no data found: walldat.json"
+        print("no data found: walldat.json")
         return
 
     with open('walldat.json') as openfile:
@@ -217,9 +220,9 @@ def rebuild():
     os.remove('output.png')
 
 
-
 def getname():
-    ltrs = string.digits + string.uppercase
+    ltrs = string.digits + string.ascii_uppercase
+
     def n_2_l(n):
         sid = ""
         while n > len(ltrs):
@@ -230,17 +233,18 @@ def getname():
 
     n = 0
     while "WPT"+n_2_l(n) in wad.patches:
-        n+=1
+        n += 1
 
     return "WPT"+n_2_l(n)
-    
-if __name__=="__main__":
+
+
+if __name__ == "__main__":
     if len(sys.argv) < 3:
         if "rebuild" in sys.argv:
             rebuild()
         else:
-            print "usage:"
-            print "    wallpaint.py wad map [line numbers]"
+            print("usage:")
+            print("    wallpaint.py wad map [line numbers]")
     else :
         wad_path = sys.argv[1]
         map_id = sys.argv[2].upper()
@@ -251,5 +255,4 @@ if __name__=="__main__":
         load_texturepacks()
         wad = omg.WAD(wad_path)
         wmap = omg.mapedit.MapEditor(wad.maps[map_id])
-        #build_line(lines[0])[0].show()
         build_all(lines)
