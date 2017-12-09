@@ -52,3 +52,8 @@ walldat.json
 build/*
 *.spec
 omg/*
+output.png
+test.wad
+*.wad
+*.bak
+*.wad
