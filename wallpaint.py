@@ -12,6 +12,7 @@ wtex = None
 
 def load_texturepacks():
     tpaths = [line.rstrip('\n') for line in open('texture_packs.txt')]
+    tpaths.insert(0, wad_path)
     for p in tpaths:
         try:
             tex_packs.append(omg.WAD(p))
