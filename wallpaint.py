@@ -60,7 +60,7 @@ class Wallpaint():
                 texture_def = txd
                 texture_ch = tx_ch
 
-        if t not in texture_def:
+        if texture_def is None:
             print("!!CANNOT FIND {} IN TEXTURE PACKS!!".format(t))
             print("")
             print("try editing texture_packs.txt and adding your texture wad path to it")
