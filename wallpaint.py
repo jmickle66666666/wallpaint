@@ -17,7 +17,7 @@ class Wallpaint():
     def load_texturepacks(self):
         self.loaded_textures = True
         tpaths = [line.rstrip('\n') for line in open("texture_packs.txt")]
-        tpaths.insert(0, self.wad_path)
+        tpaths.insert(len(tpaths), self.wad_path)
         for p in tpaths:
             try:
                 self.tex_packs.append(omg.WAD(p))
@@ -45,22 +45,34 @@ class Wallpaint():
         if t in self.cache.keys():
             return self.cache[t]
 
+        texture_wad = None
+        texture_def = None
+        texture_ch = None
+
+        master_list = []
+
         for tx_ch in self.tex_packs:
             txd = omg.txdef.Textures(tx_ch.txdefs)
             txw = tx_ch
+            master_list.append(txw)
             if t in txd:
-                break
+                texture_wad = txw
+                texture_def = txd
+                texture_ch = tx_ch
 
-        if t not in txd:
+        if t not in texture_def:
             print("!!CANNOT FIND {} IN TEXTURE PACKS!!".format(t))
             print("")
             print("try editing texture_packs.txt and adding your texture wad path to it")
             return
 
-        output = Image.new("RGB", (txd[t].width, txd[t].height))
-        for p in txd[t].patches:
-            pimg = txw.patches[p.name.upper()].to_Image()
-            output.paste(pimg, (p.x, p.y))
+        output = Image.new("RGB", (texture_def[t].width, texture_def[t].height))
+        for p in texture_def[t].patches:
+            for tx in master_list:
+                if p.name.upper() in tx.patches:
+                    pimg = tx.patches[p.name.upper()].to_Image()
+                    output.paste(pimg, (p.x, p.y))
+                    break
 
         self.cache[t] = output
 
