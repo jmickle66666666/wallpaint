@@ -1,5 +1,6 @@
 from tkinter import *
-from tkinter.filedialog import askopenfilename
+from tkinter.filedialog import askopenfilename, asksaveasfilename
+from tkinter import messagebox
 import omg
 import drawmap
 import wallpaint
@@ -14,7 +15,7 @@ class LoadDialogue(Tk):
     def __init__(self, parent=None):
         Tk.__init__(self, parent)
         self.title("wallpaint")
-        self.frame = Frame(self, width=320, height=240)
+        self.frame = Frame(self, width=320, height=240, bg="#222222")
         self.frame.grid(sticky="NSWE")
         self.frame.rowconfigure(2, weight=1)
         self.frame.columnconfigure(1, weight=1)
@@ -27,22 +28,26 @@ class LoadDialogue(Tk):
         self.map_select = None
         self.wad = None
         # self.resizable(False, False)
-        self.minsize(640, 480)
+        self.minsize(640, 640)
         self.configure(pady=8, padx=8)
         self.select_map_button = None
         self.map_preview = None
-
         self.test_frame = None
+        img = Image.open("header.png")
 
+        self.header_image = ImageTk.PhotoImage(img)
         self.init_gui()
 
     def init_gui(self):
-        self.title_label = Label(self.frame, text="pick you're poison,,")
+        self.configure(bg="#222222")
+        self.title_label = Label(self.frame, text="title", bg="#222222")
+        self.title_label.configure(image=self.header_image)
         self.title_label.grid(columnspan=3, sticky="NEW")
         self.load_path = Entry(self.frame, state=DISABLED)
         self.load_path.grid(row=1, column=0, columnspan=3, sticky="EW")
         self.load_button = Button(self.frame, text="...", command=self.load_wad)
         self.load_button.grid(row=1, column=2, sticky="E")
+        self.focus()
         self.select_map_button = Button(self.frame, text="Open", command=self.open_map)
         self.select_map_button.grid(row=3, column=0, sticky="wS")
         self.map_select = Listbox(self.frame, width=6, selectmode=SINGLE)
@@ -94,13 +99,14 @@ class MapView(Tk):
         self.frame.grid(sticky="NEWS")
         self.rowconfigure(0, weight=1)
         self.columnconfigure(0, weight=1)
-        self.frame.rowconfigure(2, weight=1)
+        self.frame.rowconfigure(4, weight=1)
         self.frame.columnconfigure(0, weight=1)
         self.map_canvas = None
         self.preview_button = None
         self.export_button = None
         self.clear_button = None
         self.line_list_box = None
+        self.textures_button = None
 
         self.bg_color = "#221c23"
         self.line_color = "#ac3232"
@@ -138,9 +144,13 @@ class MapView(Tk):
         self.mouse_down = False
         self.last_pos = (0, 0)
 
+        if not os.path.isfile("texture_packs.txt"):
+            if messagebox.askyesno("hey", "looks like you have no texture wads set up (like iwads) , wanna fix that?"):
+                TexturePackSelector()
+
     def init_gui(self):
         self.map_canvas = Canvas(self.frame, width=640, height=480, bg=self.bg_color)
-        self.map_canvas.grid(row=0, column=0, rowspan=4, sticky="NEWS")
+        self.map_canvas.grid(row=0, column=0, rowspan=5, sticky="NEWS")
 
         self.preview_button = Button(self.frame, text="preview", command=self.create_preview)
         self.preview_button.grid(row=0, column=1, sticky="NEW")
@@ -148,8 +158,11 @@ class MapView(Tk):
         self.clear_button = Button(self.frame, text="clear", command=self.clear_lines)
         self.clear_button.grid(row=1, column=1, sticky="NEW")
 
+        self.textures_button = Button(self.frame, text="textures", command=TexturePackSelector)
+        self.textures_button.grid(row=3, column=1, sticky="NEW")
+
         self.line_list_box = Listbox(self.frame, width=6)
-        self.line_list_box.grid(row=3, column=1, sticky="NEWS")
+        self.line_list_box.grid(row=4, column=1, sticky="NEWS")
 
         self.export_button = Button(self.frame, text="export", command=self.export)
         self.export_button.grid(row=2, column=1, sticky="NEW")
@@ -199,7 +212,7 @@ class MapView(Tk):
         lines = []
         for l in self.line_list:
             lines.append(int(l) - 1)
-        self.wp.save(lines)
+        self.wp.save(lines, asksaveasfilename(title="Save unwrapped image!", initialfile="output.png"))
         webbrowser.open("file://" + os.path.dirname(os.path.realpath(__file__)))
 
         self.close()
@@ -297,10 +310,53 @@ class RebuildDialogue(Tk):
         self.ok_button = Button(self, text="ok!!!", command=self.ok)
         self.label.grid()
         self.ok_button.grid(row=1)
+        self.configure(padx=16, pady=16)
 
     def ok(self):
-        self.wp.rebuild()
+        self.wp.rebuild(asksaveasfilename(title="Save your new wad!!", initialfile="output.wad"))
         webbrowser.open("file://" + os.path.dirname(os.path.realpath(__file__)))
+        self.destroy()
+
+
+class TexturePackSelector(Tk):
+    def __init__(self, parent=None):
+        Tk.__init__(self, parent)
+        self.title("Texture Packs")
+        self.rowconfigure(1, weight=1)
+        self.columnconfigure(0, weight=1)
+        self.pack_list = Listbox(self, width=40, selectmode=SINGLE)
+        self.pack_list.grid(rowspan=2, sticky="NEWS")
+        self.add_button = Button(self, text="+", command=self.add)
+        self.add_button.grid(row=0, column=1, sticky="EN")
+        self.remove_button = Button(self, text="-", command=self.remove)
+        self.remove_button.grid(row=1, column=1, sticky="EN")
+        self.done_button = Button(self, text="ok", command=self.done)
+        self.done_button.grid(row=1, column=1, sticky="ES")
+
+        self.packs = []
+
+        if os.path.isfile("texture_packs.txt"):
+            with open("texture_packs.txt", "r") as f:
+                self.packs = f.readlines()
+
+        for t in self.packs:
+            self.pack_list.insert(END, t)
+
+    def add(self):
+        path = askopenfilename()
+        self.pack_list.insert(END, path)
+
+    def remove(self):
+        if len(self.pack_list.curselection()) > 0:
+            index = int(self.pack_list.curselection()[0])
+            self.pack_list.delete(index)
+
+    def done(self):
+        self.packs = []
+        for i in self.pack_list.get(0, END):
+            self.packs.append(i)
+        with open("texture_packs.txt", "w") as f:
+            f.writelines(self.packs)
         self.destroy()
 
 

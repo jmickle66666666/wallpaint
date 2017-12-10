@@ -12,11 +12,11 @@ class Wallpaint():
         if self.map_id is not None:
             self.wmap = omg.mapedit.MapEditor(self.wad.maps[self.map_id])
         self.wtex = None
-
-        self.load_texturepacks()
+        self.loaded_textures = False
 
     def load_texturepacks(self):
-        tpaths = [line.rstrip('\n') for line in open('texture_packs.txt')]
+        self.loaded_textures = True
+        tpaths = [line.rstrip('\n') for line in open("texture_packs.txt")]
         tpaths.insert(0, self.wad_path)
         for p in tpaths:
             try:
@@ -38,6 +38,9 @@ class Wallpaint():
 
     def make_texture(self, t):
         # return an Image of a texture (build from patches)
+
+        if not self.loaded_textures:
+            self.load_texturepacks()
 
         if t in self.cache.keys():
             return self.cache[t]
@@ -69,6 +72,9 @@ class Wallpaint():
         return int(math.sqrt((i.x - j.x)**2 + (i.y - j.y)**2))
 
     def build_line(self, line):
+        if not self.loaded_textures:
+            self.load_texturepacks()
+
         linedef = self.wmap.linedefs[line]
         sidedef = self.wmap.sidedefs[linedef.front]
         sector = self.wmap.sectors[sidedef.sector]
@@ -133,6 +139,9 @@ class Wallpaint():
         return line_img, z1, z4, line, secs
 
     def build_all(self, lines):
+        if not self.loaded_textures:
+            self.load_texturepacks()
+
         built_lines = []
         for l in lines:
             built_lines.append(self.build_line(l))
@@ -175,18 +184,23 @@ class Wallpaint():
         return output, wdat
 
     def preview(self, linelist):
+        if not self.loaded_textures:
+            self.load_texturepacks()
         self.build_all(linelist)[0].show("Preview")
 
-    def save(self, linelist):
+    def save(self, linelist, filename):
+        if not self.loaded_textures:
+            self.load_texturepacks()
         image, data = self.build_all(linelist)
+        data["image_path"] = filename
 
         with open('walldat.json', 'w') as outfile:
             json.dump(data, outfile)
 
-        image.save('output.png')
+        image.save(filename)
 
 
-    def rebuild(self):
+    def rebuild(self, output_path):
         if os.path.exists('walldat.json') != True:
             print("no data found: walldat.json")
             return
@@ -196,7 +210,7 @@ class Wallpaint():
         self.wad_path = wjson['wad_path']
         self.map_id = wjson['map_id']
         line_data = wjson['linedata']
-        tex_img = Image.open('output.png','r')
+        tex_img = Image.open(wjson['image_path'],'r')
         self.wad = omg.WAD(str(self.wad_path))
         self.wmap = omg.MapEditor(self.wad.maps[str(self.map_id)])
         self.txd = omg.txdef.Textures()
@@ -229,9 +243,9 @@ class Wallpaint():
 
         self.wad.txdefs = self.txd.to_lumps()
         self.wad.maps[str(self.map_id)] = self.wmap.to_lumps()
-        self.wad.to_file('output.wad')
+        self.wad.to_file(output_path)
         os.remove('walldat.json')
-        os.remove('output.png')
+        os.remove(wjson['image_path'])
 
     def getname(self):
         ltrs = string.digits + string.ascii_uppercase
