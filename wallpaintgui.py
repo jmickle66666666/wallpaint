@@ -6,6 +6,8 @@ import wallpaint
 from PIL import Image
 from PIL import ImageTk
 import threading
+import os
+import webbrowser
 
 
 class LoadDialogue(Tk):
@@ -46,9 +48,7 @@ class LoadDialogue(Tk):
         self.map_select = Listbox(self.frame, width=6, selectmode=SINGLE)
         self.map_select.grid(row=2, column=0, sticky="NSWE")
         self.map_select.bind("<<ListboxSelect>>", self.on_map_select)
-        img = self.blank_image()
-        self.map_preview = Label(self.frame, image=img, bg="#000")
-        self.map_preview.image = img
+        self.map_preview = Label(self.frame, bg="#000")
         self.map_preview.grid(row=2, column=1, rowspan=2, columnspan=2, sticky="NEWS")
 
     def on_map_select(self, e):
@@ -66,10 +66,6 @@ class LoadDialogue(Tk):
 
         t = threading.Thread(target=async_update_image)
         t.start()
-
-    def blank_image(self):
-        image = Image.new("RGB", (100, 100), color="black")
-        return ImageTk.PhotoImage(image)
 
     def load_wad(self):
         self.path = askopenfilename()
@@ -102,6 +98,7 @@ class MapView(Tk):
         self.frame.columnconfigure(0, weight=1)
         self.map_canvas = None
         self.preview_button = None
+        self.export_button = None
         self.clear_button = None
         self.line_list_box = None
 
@@ -143,16 +140,19 @@ class MapView(Tk):
 
     def init_gui(self):
         self.map_canvas = Canvas(self.frame, width=640, height=480, bg=self.bg_color)
-        self.map_canvas.grid(row=0, column=0, rowspan=3, sticky="NEWS")
+        self.map_canvas.grid(row=0, column=0, rowspan=4, sticky="NEWS")
 
         self.preview_button = Button(self.frame, text="preview", command=self.create_preview)
         self.preview_button.grid(row=0, column=1, sticky="NEW")
 
-        self.preview_button = Button(self.frame, text="clear", command=self.clear_lines)
-        self.preview_button.grid(row=1, column=1, sticky="NEW")
+        self.clear_button = Button(self.frame, text="clear", command=self.clear_lines)
+        self.clear_button.grid(row=1, column=1, sticky="NEW")
 
         self.line_list_box = Listbox(self.frame, width=6)
-        self.line_list_box.grid(row=2, column=1, sticky="NEWS")
+        self.line_list_box.grid(row=3, column=1, sticky="NEWS")
+
+        self.export_button = Button(self.frame, text="export", command=self.export)
+        self.export_button.grid(row=2, column=1, sticky="NEW")
 
     def create_preview(self):
         # print("wallpaint {} {}".format(self.mapname, self.line_list))
@@ -194,6 +194,16 @@ class MapView(Tk):
                                         tags=mapeditor.linedefs.index(l) + 1)
 
         self.map_canvas.move("all", self.map_canvas.winfo_reqwidth() / 2, self.map_canvas.winfo_reqheight() / 2)
+
+    def export(self):
+        lines = []
+        for l in self.line_list:
+            lines.append(int(l) - 1)
+        self.wp.save(lines)
+        webbrowser.open("file://" + os.path.dirname(os.path.realpath(__file__)))
+
+        self.close()
+        RebuildDialogue().mainloop()
 
     def close(self):
         self.destroy()
@@ -278,7 +288,25 @@ class MapView(Tk):
             self.map_canvas.itemconfig(closest, fill=self.highlight_color, width=2.0)
 
 
+class RebuildDialogue(Tk):
+    def __init__(self, parent = None):
+        Tk.__init__(self, parent)
+        self.wp = wallpaint.Wallpaint()
+        self.title("Rebuild")
+        self.label = Label(self, text="When you're done editing, hit ok!!!")
+        self.ok_button = Button(self, text="ok!!!", command=self.ok)
+        self.label.grid()
+        self.ok_button.grid(row=1)
+
+    def ok(self):
+        self.wp.rebuild()
+        webbrowser.open("file://" + os.path.dirname(os.path.realpath(__file__)))
+        self.destroy()
+
 
 if __name__ == "__main__":
+    if os.path.exists('walldat.json'):
+        app = RebuildDialogue()
+
     app = LoadDialogue()
     app.mainloop()

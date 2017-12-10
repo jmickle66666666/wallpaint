@@ -178,7 +178,7 @@ class Wallpaint():
         self.build_all(linelist)[0].show("Preview")
 
     def save(self, linelist):
-        image, data = self.build_all(self, linelist)
+        image, data = self.build_all(linelist)
 
         with open('walldat.json', 'w') as outfile:
             json.dump(data, outfile)
