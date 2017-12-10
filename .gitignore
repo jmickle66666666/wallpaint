@@ -59,3 +59,4 @@ test.wad
 *.wad
 .idea/*
 __pycache__/*
+dist/*
