@@ -57,3 +57,5 @@ test.wad
 *.wad
 *.bak
 *.wad
+.idea/*
+__pycache__/*
