@@ -281,7 +281,7 @@ if __name__ == "__main__":
     if len(sys.argv) < 3:
         if "rebuild" in sys.argv:
             wp = Wallpaint()
-            wp.rebuild()
+            wp.rebuild("output.wad")
         else:
             print("usage:")
             print("    wallpaint.py wad map [line numbers]")
@@ -292,4 +292,4 @@ if __name__ == "__main__":
             lines.append(int(sys.argv[i]))
         wp = Wallpaint(sys.argv[1], sys.argv[2].upper())
 
-        wp.build_all(lines)
+        wp.save(lines,"output.png")
